@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany } from 'typeorm';
 import { Movie } from '../movies/movie.entity';
-import { Ticket } from 'src/tickets/ticket.entity';
+import { Ticket } from '../tickets/ticket.entity';
 
 
 @Entity()

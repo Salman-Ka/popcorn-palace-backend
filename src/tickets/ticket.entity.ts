@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
-import { Showtime } from 'src/showtimes/showtime.entity';
+import { Showtime } from '../showtimes/showtime.entity';
 
 @Entity()
 export class Ticket {
