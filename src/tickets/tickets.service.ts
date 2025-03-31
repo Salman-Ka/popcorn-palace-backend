@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Ticket } from './ticket.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
-import { Showtime } from 'src/showtimes/showtime.entity';
+import { Showtime } from '../showtimes/showtime.entity';
 
 @Injectable()
 export class TicketsService {
