@@ -36,9 +36,19 @@ export class MovieService {
   
 
 
+  // async delete(id: number): Promise<void> {
+  //   await this.movieRepo.delete(id);
+  // }
+
   async delete(id: number): Promise<void> {
+    const existing = await this.movieRepo.findOneBy({ id });
+    if (!existing) {
+      throw new NotFoundException(`Movie with id ${id} not found`);
+    }
+  
     await this.movieRepo.delete(id);
   }
+  
   
   
 }

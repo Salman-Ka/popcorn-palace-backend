@@ -26,6 +26,7 @@ describe('MoviesService', () => {
     save: jest.fn().mockResolvedValue(mockMovie),       // resolves to mockMovie
     findOneBy: jest.fn(),                 // Mocks the repository method that finds a movie by ID (used in update/delete)
     update: jest.fn(),                   // Mocks the repository method that updates a movie (used in update test)
+    delete: jest.fn(), // Mocks the repository method for deleting
 
   };
 
@@ -95,6 +96,27 @@ describe('MoviesService', () => {
           .rejects
           .toThrowError(new NotFoundException('Movie with id 99 not found'));
       });
+
+        // Test for deleting an existing movie
+  it('should delete a movie if it exists', async () => {
+    mockRepo.findOneBy.mockResolvedValue(mockMovie); // simulate found
+    mockRepo.delete = jest.fn().mockResolvedValue(undefined); // simulate delete
+
+    await service.delete(1);
+
+    expect(mockRepo.findOneBy).toHaveBeenCalledWith({ id: 1 });
+    expect(mockRepo.delete).toHaveBeenCalledWith(1);
+  });
+
+  // Test for delete failure when movie doesn't exist
+  it('should throw NotFoundException if movie does not exist', async () => {
+    mockRepo.findOneBy.mockResolvedValue(null); // simulate not found
+
+    await expect(service.delete(99))
+      .rejects
+      .toThrowError(new NotFoundException('Movie with id 99 not found'));
+  });
+
     
 
   
