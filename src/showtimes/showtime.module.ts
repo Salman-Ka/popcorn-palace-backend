@@ -6,8 +6,13 @@ import { ShowtimeController } from './showtime.controller';
 import { Movie } from '../movies/movie.entity';
 
 @Module({
+  // Register the Showtime and Movie entities with TypeORM so they can be injected into services
   imports: [TypeOrmModule.forFeature([Showtime, Movie])],
+
+  // Provide the ShowtimeService to handle business logic
   providers: [ShowtimeService],
+
+  // Declare the controller to handle incoming HTTP requests
   controllers: [ShowtimeController],
 })
 export class ShowtimeModule {}

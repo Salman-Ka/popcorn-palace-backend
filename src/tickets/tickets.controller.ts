@@ -7,13 +7,17 @@ import { Ticket } from './ticket.entity';
 export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
 
+  // POST /tickets
+  // Book a new ticket based on the provided data
   @Post()
   async book(@Body() dto: CreateTicketDto): Promise<Ticket> {
     return this.ticketsService.createTicket(dto);
   }
 
+  // GET /tickets
+  // Retrieve all booked tickets
   @Get()
-async getAll(): Promise<Ticket[]> {
-  return this.ticketsService.getAllTickets();
-}
+  async getAll(): Promise<Ticket[]> {
+    return this.ticketsService.getAllTickets();
+  }
 }

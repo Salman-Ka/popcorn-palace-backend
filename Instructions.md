@@ -1,6 +1,6 @@
 # Popcorn Palace - Movie Ticket Booking API
 
-A fully functional backend API for managing movies, showtimes, and ticket bookings, developed with **NestJS** and **TypeORM**. This project is built to fulfill the backend requirements for a movie ticket booking system and emphasizes RESTful principles, input validation, error handling, and a clean modular structure.
+A fully functional backend API for managing movies, showtimes, and ticket bookings, developed with **NestJS** and **TypeORM**. This project is built to fulfill the backend requirements for a movie ticket booking system and emphasizes RESTful principles, input validation, error handling, testing,  and a clean modular structure.
 
 ---
 
@@ -13,6 +13,7 @@ A fully functional backend API for managing movies, showtimes, and ticket bookin
 ### Showtime Management
 - Create, update, delete, and fetch showtimes by ID.
 - Includes constraints to prevent overlapping showtimes for the same theater.
+- Validates that referenced movie exists.
 - Fields: `movie`, `theater`, `start_time`, `end_time`, `price`.
 
 ### Ticket Booking
@@ -24,10 +25,11 @@ A fully functional backend API for managing movies, showtimes, and ticket bookin
 
 ## Tech Stack
 - **Framework:** NestJS (TypeScript)
-- **Database:** PostgreSQL
+- **Database:** PostgreSQL (via Docker)
 - **ORM:** TypeORM
-- **Testing:** Jest
+- **Testing:** Jest + Supertest
 - **Validation:** class-validator
+- **Architecture:** Modular, testable, and scalable
 
 ---
 
@@ -74,41 +76,62 @@ npm run start:dev
 The server will be accessible at: **http://localhost:3000**
 
 ### 7. Run Unit Tests
+
 ```bash
 npm run test
 ```
-- This will run all unit tests using Jest.
-- Includes service tests for movies, showtimes (with overlap validation), and tickets (with seat duplication logic).
+
+- Tests service logic for movies, showtimes, and tickets.
+- Includes:
+  - Overlapping showtime validation
+  - Seat conflict prevention
+  - Movie existence verification in showtime logic
+
+---
+
+### 8. Run End-to-End (E2E) Tests
+
+```bash
+npm run test:e2e
+```
+
+- Located in `test/app.e2e-spec.ts`
+- Tests full flow: movie creation → showtime creation → showtime overlap error
+- Uses Supertest for HTTP-based testing
+
 
 ---
 
 ## API Endpoints Overview
 
 ### Movies
-- `POST /movies`
-- `GET /movies`
-- `PUT /movies/:id`
-- `DELETE /movies/:id`
+- `POST /movies` – Create
+- `GET /movies` – List
+- `PUT /movies/:id` – Update
+- `DELETE /movies/:id` – Delete
 
 ### Showtimes
-- `POST /showtimes`
-- `GET /showtimes`
-- `GET /showtimes/:id`
-- `PUT /showtimes/:id`
-- `DELETE /showtimes/:id`
+- `POST /showtimes` – Create (with movie existence check & overlap validation)
+- `GET /showtimes` – List
+- `GET /showtimes/:id` – Get by ID
+- `PUT /showtimes/:id` – Update (with movie and overlap validation)
+- `DELETE /showtimes/:id` – Delete
 
 ### Tickets
-- `POST /tickets`
-- `GET /tickets`
+- `POST /tickets` – Book seat
+- `GET /tickets` – List all
+
 
 ---
 
 ## Validation and Error Handling
-- Input validation using DTOs and decorators (`@IsNotEmpty`, `@IsNumber`, etc).
-- Returns standardized error responses:
-  - 400 Bad Request → Invalid input data
-  - 404 Not Found → Resource missing
-  - 409 Conflict → Seat already booked or showtime conflict
+
+- DTOs use `class-validator` decorators for strict validation.
+- Global validation pipe strips unknown fields.
+- Common error responses:
+  - `400 Bad Request` – Validation failure
+  - `404 Not Found` – Missing resource (e.g. movie, showtime)
+  - `409 Conflict` – Seat taken or showtime overlap
 
 ---
 
@@ -137,7 +160,9 @@ src/
 │   ├── ticket.service.spec.ts
 │   ├── dto/
 ├── app.module.ts
-└── main.ts
+├── main.ts
+test/
+└── app.e2e-spec.ts (End-to-End Tests)
 ```
 
 ---

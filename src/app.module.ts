@@ -5,13 +5,12 @@ import { MovieModule } from './movies/movie.module';
 import { Showtime } from './showtimes/showtime.entity';
 import { ShowtimeModule } from './showtimes/showtime.module';
 import { Ticket } from './tickets/ticket.entity';
-
-//import { AppController } from './app.controller';
-//import { AppService } from './app.service';
 import { TicketsModule } from './tickets/tickets.module';
 
+// This is the root application module
 @Module({
   imports: [
+    // Configure database connection using PostgreSQL
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost',
@@ -19,18 +18,21 @@ import { TicketsModule } from './tickets/tickets.module';
       username: 'popcorn-palace',
       password: 'popcorn-palace',
       database: 'popcorn-palace',
-      entities: [Movie, Showtime, Ticket],
-      synchronize: true, // Auto-creates tables based on entities
+      entities: [Movie, Showtime, Ticket], // Entities to auto-load
+      synchronize: true, // Auto-create DB schema (disable in production)
     }),
+
+    // Import domain modules (feature modules)
     MovieModule,
     ShowtimeModule,
     TicketsModule,
-    //TypeOrmModule.forFeature([Movie]), // Makes Movie repository available
+
+    // Removed App-level controller/service & extra repo bindings (not needed)
+    // TypeOrmModule.forFeature([Movie]),
   ],
 
-  //controllers: [AppController],
-  //providers: [AppService],
-
+  // App-level controllers and providers (commented out, unused)
+  // controllers: [AppController],
+  // providers: [AppService],
 })
-  
 export class AppModule {}

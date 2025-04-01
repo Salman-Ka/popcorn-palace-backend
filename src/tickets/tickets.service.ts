@@ -15,7 +15,9 @@ export class TicketsService {
     private readonly showtimeRepo: Repository<Showtime>,
   ) {}
 
+  // Book a new ticket with seat and showtime validation
   async createTicket(dto: CreateTicketDto): Promise<Ticket> {
+    // Check if the showtime exists
     const showtime = await this.showtimeRepo.findOne({
       where: { id: dto.showtime_id },
     });
@@ -24,6 +26,7 @@ export class TicketsService {
       throw new NotFoundException(`Showtime ${dto.showtime_id} not found`);
     }
 
+    // Check if the seat is already booked for this showtime
     const existing = await this.ticketRepo.findOne({
       where: {
         seat_number: dto.seat_number,
@@ -35,6 +38,7 @@ export class TicketsService {
       throw new ConflictException('Seat already booked for this showtime');
     }
 
+    // Create and save the new ticket
     const ticket = this.ticketRepo.create({
       seat_number: dto.seat_number,
       customer_name: dto.customer_name,
@@ -44,10 +48,10 @@ export class TicketsService {
     return this.ticketRepo.save(ticket);
   }
 
+  // Retrieve all booked tickets with their associated showtimes
   async getAllTickets(): Promise<Ticket[]> {
     return this.ticketRepo.find({
       relations: ['showtime'],
     });
   }
-  
 }
