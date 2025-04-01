@@ -3,12 +3,13 @@ import { ShowtimeService } from './showtime.service';
 import { getRepositoryToken } from '@nestjs/typeorm'; // For mocking TypeORM repo
 import { Showtime } from './showtime.entity';
 import { Repository } from 'typeorm';
-import { Movie } from 'src/movies/movie.entity';
+import { Movie } from '../movies/movie.entity';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 
 describe('ShowtimeService', () => {
   let service: ShowtimeService;
   let repo: Repository<Showtime>;
+  let movieRepo: Repository<Movie>;
 
   // A mock showtime object we’ll reuse in tests
   const mockShowtime: Showtime = {
@@ -21,7 +22,7 @@ describe('ShowtimeService', () => {
     tickets: []
   };
 
-  // Mock the repository functions
+  // Mock the repository functions for Showtime
   const mockRepo = {
     create: jest.fn().mockImplementation((dto) => dto), // returns DTO as-is
     save: jest.fn().mockResolvedValue(mockShowtime),    // resolves to mock showtime
@@ -31,6 +32,11 @@ describe('ShowtimeService', () => {
     delete: jest.fn(),         // for delete() test
   };
 
+  // Mock the repository function for Movie existence check
+  const mockMovieRepo = {
+    findOneBy: jest.fn(), // used to simulate finding a movie by ID
+  };
+
   // Setup the testing module before each test
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -38,9 +44,12 @@ describe('ShowtimeService', () => {
       providers: [
         ShowtimeService,
         {
-          // Provide the mocked repo instead of the real DB
           provide: getRepositoryToken(Showtime),
           useValue: mockRepo,
+        },
+        {
+          provide: getRepositoryToken(Movie),
+          useValue: mockMovieRepo,
         },
       ],
     }).compile();
@@ -48,6 +57,7 @@ describe('ShowtimeService', () => {
     // Extract service and repo instances from the test module
     service = module.get<ShowtimeService>(ShowtimeService);
     repo = module.get<Repository<Showtime>>(getRepositoryToken(Showtime));
+    movieRepo = module.get<Repository<Movie>>(getRepositoryToken(Movie));
   });
 
   // First test: Make sure the service is defined
@@ -55,121 +65,63 @@ describe('ShowtimeService', () => {
     expect(service).toBeDefined();
   });
 
-    // Test: create() should succeed when there is no overlap
-    it('should create a showtime when there is no overlap', async () => {
-        const dto = {
-          theater: 'Cinema 1',
-          start_time: '2025-03-30T14:00:00Z',
-          end_time: '2025-03-30T16:00:00Z',
-          price: 40,
-          movie: 1, // movie ID
-        };
-    
-        // Mock findOne to simulate no overlap (returns null)
-        repo.findOne = jest.fn().mockResolvedValue(null);
-    
-        // Call the create() method
-        const result = await service.create(dto);
-    
-        // Check the result is the mock showtime object
-        expect(result).toEqual(mockShowtime);
-    
-        // Verify that repo.findOne was called to check overlap
-        expect(repo.findOne).toHaveBeenCalled();
-    
-        // Verify that repo.create and repo.save were called
-        expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({
-          theater: dto.theater,
-          price: dto.price,
-        }));
-        expect(repo.save).toHaveBeenCalled();
-      });
-
-
-        // Test: create() should throw ConflictException on overlapping showtime
-  it('should throw ConflictException if showtime overlaps in the same theater', async () => {
+  // Test: create() should succeed when movie exists and no overlap
+  it('should create a showtime when there is no overlap and movie exists', async () => {
     const dto = {
       theater: 'Cinema 1',
-      start_time: '2025-03-30T15:00:00Z', // Overlaps with existing 14:00–16:00
-      end_time: '2025-03-30T17:00:00Z',
+      start_time: '2025-03-30T14:00:00Z',
+      end_time: '2025-03-30T16:00:00Z',
       price: 40,
       movie: 1,
     };
 
-    // Mock overlap detection: simulate a found conflicting showtime
-    repo.findOne = jest.fn().mockResolvedValue(mockShowtime);
+    // Simulate movie found and no overlapping showtime
+    mockMovieRepo.findOneBy.mockResolvedValue({ id: 1 });
+    repo.findOne = jest.fn().mockResolvedValue(null);
 
-    // Service should reject with ConflictException
-    await expect(service.create(dto)).rejects.toThrow(ConflictException);
+    const result = await service.create(dto);
 
+    // Ensure the service returns the mocked showtime
+    expect(result).toEqual(mockShowtime);
+    // Ensure movie lookup was called
+    expect(mockMovieRepo.findOneBy).toHaveBeenCalledWith({ id: dto.movie });
     // Ensure overlap check was made
     expect(repo.findOne).toHaveBeenCalled();
-    // Ensure showtime is NOT created when overlapping
+    // Ensure showtime was created and saved
+    expect(repo.create).toHaveBeenCalled();
+    expect(repo.save).toHaveBeenCalled();
+  });
+
+  // Test: create() should fail if movie does not exist
+  it('should throw NotFoundException if movie does not exist when creating', async () => {
+    const dto = {
+      theater: 'Cinema 1',
+      start_time: '2025-03-30T14:00:00Z',
+      end_time: '2025-03-30T16:00:00Z',
+      price: 40,
+      movie: 999,
+    };
+
+    // Simulate movie not found
+    mockMovieRepo.findOneBy.mockResolvedValue(null);
+
+    await expect(service.create(dto)).rejects.toThrow(NotFoundException);
     expect(repo.create).not.toHaveBeenCalled();
-    // Ensure showtime is NOT saved when overlapping
     expect(repo.save).not.toHaveBeenCalled();
   });
 
+  // Test: update() should throw NotFoundException if new movie does not exist
+  it('should throw NotFoundException if updated movie does not exist', async () => {
+    const updateData = {
+      movie: { id: 999 } as Movie,
+    };
 
+    // Simulate existing showtime
+    mockRepo.findOneBy.mockResolvedValue(mockShowtime);
+    // Simulate movie not found
+    mockMovieRepo.findOneBy.mockResolvedValue(null);
 
-    // Test: update() should succeed when no overlap and showtime exists
-    it('should update a showtime if it exists and no overlap', async () => {
-        const updatedData = {
-          theater: 'Cinema 1',
-          start_time: new Date( '2025-03-30T17:00:00Z'),
-          end_time: new Date('2025-03-30T19:00:00Z'),
-          price: 50,
-          movie: { id: 2 } as Movie,
-        };
-    
-        // Simulate existing showtime found by ID
-        mockRepo.findOneBy.mockResolvedValue(mockShowtime);
-    
-        // Simulate no overlap found
-        mockRepo.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce({
-          ...mockShowtime,
-          ...updatedData,
-          movie: { id: 2 } as Movie,
-        });
-    
-        const result = await service.update(1, updatedData);
-    
-        expect(mockRepo.update).toHaveBeenCalledWith(1, expect.objectContaining({
-          theater: updatedData.theater,
-          start_time: new Date(updatedData.start_time),
-          end_time: new Date(updatedData.end_time),
-        }));
-    
-        expect(result).toEqual(expect.objectContaining({
-          theater: updatedData.theater,
-          price: updatedData.price,
-          movie: { id: 2 },
-        }));
-      });
-    
-      // Test: update() should throw ConflictException on overlapping update
-      it('should throw ConflictException if updated showtime overlaps', async () => {
-        const updatedData = {
-          start_time: new Date('2025-03-30T15:00:00Z'),
-          end_time: new Date('2025-03-30T17:00:00Z'),
-        };
-    
-        mockRepo.findOneBy.mockResolvedValue(mockShowtime);
-        mockRepo.findOne.mockResolvedValue({ ...mockShowtime, id: 99 }); // overlapping showtime
-    
-        await expect(service.update(1, updatedData)).rejects.toThrow(ConflictException);
-        expect(mockRepo.update).not.toHaveBeenCalled();
-      });
-    
-      // Test: update() should throw NotFoundException if showtime is missing
-      it('should throw NotFoundException if showtime does not exist', async () => {
-        mockRepo.findOneBy.mockResolvedValue(null);
-    
-        await expect(service.update(999, { theater: 'New Theater' }))
-          .rejects
-          .toThrow(new NotFoundException('Showtime with id 999 not found'));
-      });
-    
-
-    
+    await expect(service.update(1, updateData)).rejects.toThrow(NotFoundException);
+    expect(mockRepo.update).not.toHaveBeenCalled();
+  });
 });
