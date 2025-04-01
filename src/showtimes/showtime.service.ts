@@ -90,19 +90,28 @@ export class ShowtimeService {
       throw new NotFoundException(`Showtime with id ${id} not found`);
     }
 
-    // If movie ID is being updated, validate the new movie exists
-    if (updatedData.movie) {
-      //const movieExists = await this.movieRepo.findOneBy({ id: updatedData.movie as number });
-      const movieId = (updatedData.movie as Movie).id;
-      const movieExists = await this.movieRepo.findOneBy({ id: movieId });
-      if (!movieExists) {
-        throw new NotFoundException(`Movie with ID ${updatedData.movie} not found`);
-      }
+// If movie ID is being updated, validate the new movie exists
+if (updatedData.movie) {
+  // Support both number (ID) or object ({ id: number })
+  const movieId =
+    typeof updatedData.movie === 'number'
+      ? updatedData.movie
+      : (updatedData.movie as Movie).id;
 
-      const movie = new Movie();
-      movie.id = updatedData.movie as unknown as number;
-      updatedData.movie = movie;
-    }
+  if (!movieId) {
+    throw new NotFoundException('Invalid movie ID provided');
+  }
+
+  const movieExists = await this.movieRepo.findOneBy({ id: movieId });
+  if (!movieExists) {
+    throw new NotFoundException(`Movie with ID ${movieId} not found`);
+  }
+
+  // Set updatedData.movie to an instance of Movie with the correct ID
+  const movie = new Movie();
+  movie.id = movieId;
+  updatedData.movie = movie;
+}
 
     // Convert times and preserve existing values if not provided
     const start = typeof updatedData.start_time === 'string'
